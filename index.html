@@ -353,13 +353,6 @@ button:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
 .ico{width:44px;height:30px;flex:none}
 .rules{margin:0;padding-left:1.2em;color:var(--muted);font-size:13px;display:grid;gap:2px}
 
-@media (prefers-reduced-motion:reduce){
-  .dice.rolling .d{animation:none}
-  .tok,.tok.riding{transition-duration:.05s}
-  .rain i{animation:none}
-  .storm *{animation:none}
-  .tw-sway,.tw-line,.sun-rays{animation:none}
-}
 </style>
 </head>
 <body>
@@ -1142,12 +1135,6 @@ function runFireworks(n, pts){
     palette: [mine, '#FFD23F', '#FF6B6B', '#6FD3FF', '#B28DFF', '#7CF29C'], nextRing: 0, nextDigit: 0
   };
   fwSize();
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches){
-    const {ctx, w, h, K} = fw;
-    ctx.clearRect(0, 0, w, h); ctx.fillStyle = mine;
-    pts.forEach(([px, py]) => { ctx.beginPath(); ctx.arc(w / 2 + px * K, h * .36 + py * K, 2, 0, 6.283); ctx.fill(); });
-    return;
-  }
   const t0 = performance.now();
   fw.nextRing = t0 + 1800; fw.nextDigit = t0 + 4300;
   launch('digit', t0);
