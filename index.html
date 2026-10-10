@@ -1,0 +1,1194 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>爬樹盪鞦韆棋</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: dice and status sit above a square 11x11 park board on phones; on wide screens the board is on the left and the controls stack on the right. */
+:root{
+  --bg:#E3EFDA;
+  --surface:#FCFFF9;
+  --ink:#1A2B1E;
+  --muted:#51655A;
+  --line:#C3D8BA;
+  --edge:#24402B;
+  --tile-a:#FBF3D5;
+  --tile-b:#F0E4B8;
+  --tile-start:#CBE6F5;
+  --tile-end:#FFD98A;
+  --halo:rgba(255,252,240,.88);
+  --tree:#2A8450;
+  --tree-dark:#17613A;
+  --tree-light:#8FD6A2;
+  --trunk:#9A6636;
+  --trunk-dark:#5E3B1C;
+  --swing:#F26B38;
+  --swing-dark:#B8420F;
+  --swing-light:#FFC0A0;
+  --pond:#4FA9D9;
+  --pond-dark:#256F9C;
+  --pond-light:#BDE6F7;
+  --duck:#FFD23F;
+  --beak:#F28C28;
+  --rain:#3E78A3;
+  --rain-veil:rgba(36,66,96,.3);
+  --twister:#4F5B66;
+  --twister-light:#DCE4EA;
+  --p1:#7B4BD6;--p2:#E0A100;--p3:#2866C9;--p4:#D6336C;
+  --on1:#FFFFFF;--on2:#2B1F00;--on3:#FFFFFF;--on4:#FFFFFF;
+  --die:#FFFFFF;
+  --die-edge:#1A2B1E;
+  --pip:#1A2B1E;
+  --veil:rgba(227,239,218,.86);
+  --on-accent:#FFFFFF;
+  --focus:#2866C9;
+  --font-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --font-num:"Fredoka","Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --twister:#8E9DAB;--twister-light:#E8EEF3;
+    --pond:#3B8FC4;--pond-dark:#1B5A85;--pond-light:#8CCBEA;--duck:#FFD84D;--beak:#FF9A3C;--rain:#A8D0EE;--rain-veil:rgba(8,20,34,.38);
+    --bg:#0E1A12;--surface:#162419;--ink:#E5F0E4;--muted:#9DB5A3;--line:#2B4332;--edge:#5C8A68;
+    --tile-a:#38341F;--tile-b:#2E2B19;--tile-start:#1F4A68;--tile-end:#6A4A12;--halo:rgba(14,26,18,.8);
+    --tree:#4CC17E;--tree-dark:#1D6B40;--tree-light:#9BE0B2;--trunk:#B88555;--trunk-dark:#6E4A28;
+    --swing:#FF8556;--swing-dark:#C8501C;--swing-light:#FFC7AB;
+    --p1:#A581F2;--p2:#F2B705;--p3:#6FA8F5;--p4:#F0699B;
+    --on1:#0E1A12;--on2:#0E1A12;--on3:#0E1A12;--on4:#0E1A12;
+    --die:#F2F7F2;--die-edge:#9DB5A3;--pip:#1A2B1E;
+    --veil:rgba(14,26,18,.84);--on-accent:#0E1A12;--focus:#8CC0F5;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --twister:#8E9DAB;--twister-light:#E8EEF3;
+  --pond:#3B8FC4;--pond-dark:#1B5A85;--pond-light:#8CCBEA;--duck:#FFD84D;--beak:#FF9A3C;--rain:#A8D0EE;--rain-veil:rgba(8,20,34,.38);
+  --bg:#0E1A12;--surface:#162419;--ink:#E5F0E4;--muted:#9DB5A3;--line:#2B4332;--edge:#5C8A68;
+  --tile-a:#38341F;--tile-b:#2E2B19;--tile-start:#1F4A68;--tile-end:#6A4A12;--halo:rgba(14,26,18,.8);
+  --tree:#4CC17E;--tree-dark:#1D6B40;--tree-light:#9BE0B2;--trunk:#B88555;--trunk-dark:#6E4A28;
+  --swing:#FF8556;--swing-dark:#C8501C;--swing-light:#FFC7AB;
+  --p1:#A581F2;--p2:#F2B705;--p3:#6FA8F5;--p4:#F0699B;
+  --on1:#0E1A12;--on2:#0E1A12;--on3:#0E1A12;--on4:#0E1A12;
+  --die:#F2F7F2;--die-edge:#9DB5A3;--pip:#1A2B1E;
+  --veil:rgba(14,26,18,.84);--on-accent:#0E1A12;--focus:#8CC0F5;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--font-body);line-height:1.5;
+  padding-inline:16px;padding-block:16px 32px;
+}
+button{font-family:inherit;touch-action:manipulation}
+button:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+
+.app{
+  max-width:1000px;margin-inline:auto;display:grid;gap:14px;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"head" "roll" "board" "side";
+}
+@media (min-width:880px){
+  .app{
+    grid-template-columns:minmax(0,640px) minmax(260px,1fr);
+    grid-template-rows:auto auto 1fr;
+    grid-template-areas:"head head" "board roll" "board side";
+    column-gap:28px;align-items:start;
+  }
+}
+.head{grid-area:head}
+.head h1{margin:0;font-size:28px;line-height:1.15;font-weight:900;letter-spacing:.04em;text-wrap:balance}
+.head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
+
+/* Dice and status */
+.roll{grid-area:roll;display:flex;align-items:center;gap:16px}
+.dice{
+  flex:none;display:flex;gap:10px;padding:0 0 5px;border:0;background:none;cursor:pointer;
+  transition:transform .1s;
+}
+.dice:hover:not(:disabled){transform:translateY(-2px)}
+.dice:active:not(:disabled){transform:translateY(3px)}
+.dice:disabled{cursor:default}
+.d{
+  width:70px;height:70px;padding:7px;display:grid;place-items:center;
+  background:var(--die);border:3px solid var(--die-edge);border-radius:18px;box-shadow:0 5px 0 var(--die-edge);
+}
+.dice.rolling .d{animation:tumble .45s ease-in-out infinite}
+.dice.rolling .d:nth-child(2){animation-delay:-.22s}
+@keyframes tumble{
+  0%{transform:rotate(0) translateY(0)}
+  25%{transform:rotate(-14deg) translateY(-6px)}
+  50%{transform:rotate(10deg) translateY(0)}
+  75%{transform:rotate(-8deg) translateY(-4px)}
+  100%{transform:rotate(0) translateY(0)}
+}
+.face{width:100%;height:100%;display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);place-items:center}
+.face i{width:78%;aspect-ratio:1;border-radius:50%}
+.face i.on{background:var(--pip)}
+.face.q{grid-template:1fr/1fr;font:700 38px/1 var(--font-num);color:var(--pip)}
+.say{min-width:0;flex:1}
+.turn{margin:0;display:flex;align-items:center;gap:8px;font-size:17px;font-weight:700}
+.msg{margin:4px 0 0;font-size:15px;min-height:45px;overflow-wrap:anywhere}
+
+.dot{
+  width:32px;height:32px;padding:2px;flex:none;display:inline-grid;place-items:center;border-radius:50%;
+  background:var(--pc);color:var(--on);font:700 13px/1 var(--font-num);
+}
+
+/* Pet icons */
+.pf{fill:var(--die);stroke:var(--pip);stroke-width:1.4;stroke-linejoin:round}
+.pd{fill:var(--pip)}
+.pl{fill:none;stroke:var(--pip);stroke-width:1.2;stroke-linecap:round}
+.pe{fill:#8B5A2B;stroke:var(--pip);stroke-width:1.4}
+.tg{fill:#7ACB8B;stroke:var(--pip);stroke-width:1.3;stroke-linejoin:round}
+.ts{fill:#4FAE6B;stroke:var(--pip);stroke-width:1.4}
+.tl{fill:none;stroke:#1D6B40;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+.dot svg,.tok svg{width:100%;height:100%;display:block}
+.tok{padding:0}
+.tok svg{position:absolute;inset:8%;width:84%;height:84%}
+.sd{display:none}
+.tok.sad .sd{display:inline}
+.tok.sad .hp{display:none}
+.tok .oh{position:absolute;bottom:92%;left:50%;transform:translateX(-50%) scale(.6);transform-origin:50% 100%;
+  opacity:0;pointer-events:none;white-space:nowrap;font:700 12px/1 var(--font-num,inherit);font-style:normal;
+  background:#fff;color:#222;border:2px solid #222;border-radius:10px;padding:4px 7px;transition:opacity .15s,transform .15s}
+.tok .oh::after{content:"";position:absolute;left:50%;top:100%;margin-left:-5px;border:5px solid transparent;border-top-color:#222}
+.tok.left .oh{left:0;transform:translateX(0) scale(.6);transform-origin:0 100%}
+.tok.right .oh{left:auto;right:0;transform:translateX(0) scale(.6);transform-origin:100% 100%}
+.tok.left .oh::after{left:14px}.tok.right .oh::after{left:auto;right:14px;margin-left:0}
+.tok.oh-on{z-index:5}
+.tok.oh-on .oh{opacity:1}
+.tok.oh-on .oh{transform:translateX(-50%) scale(1)}
+.tok.left.oh-on .oh,.tok.right.oh-on .oh{transform:scale(1)}
+
+/* Sun, rainbow, home */
+.sun{opacity:0;transition:opacity .9s}
+.sun.on{opacity:1}
+.sun-beam{fill:#FFE88A;opacity:.4}
+.sun-disc{fill:#FFD23F;stroke:#F2A100;stroke-width:4}
+.sun-ray{stroke:#FFC21A;stroke-width:6;stroke-linecap:round}
+.sun-rays{animation:spin 14s linear infinite;transform-box:fill-box;transform-origin:center}
+@keyframes spin{to{transform:rotate(360deg)}}
+.rainbow{opacity:0;transition:opacity 1s}
+.rainbow.on{opacity:1}
+.rb-cloud{fill:#fff;stroke:#C8D8E4;stroke-width:2}
+.hs-wall{fill:#FFF3D6;stroke:var(--pip);stroke-width:3}
+.hs-roof{fill:#D9534F;stroke:var(--pip);stroke-width:3;stroke-linejoin:round}
+.hs-chim{fill:#B5483F;stroke:var(--pip);stroke-width:2}
+.hs-door{fill:#8B5A2B;stroke:var(--pip);stroke-width:2}
+.hs-win{fill:#9BD6F2;stroke:var(--pip);stroke-width:2}
+
+/* Board */
+.board-wrap{grid-area:board;container-type:inline-size;min-width:0}
+.board{
+  position:relative;width:100%;aspect-ratio:1;overflow:hidden;
+  border:4px solid var(--edge);border-radius:16px;background:var(--tile-a);
+}
+.tiles,.labels{
+  position:absolute;inset:0;display:grid;
+  grid-template-columns:repeat(11,1fr);grid-template-rows:repeat(11,1fr);pointer-events:none;
+}
+.tile.a{background:var(--tile-a)}
+.tile.b{background:var(--tile-b)}
+.tile.start{background:var(--tile-start)}
+.tile.end{background:var(--tile-end)}
+.paths{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.lab{
+  display:flex;flex-direction:column;align-items:flex-start;padding:2px 0 0 3px;line-height:1;
+  font-family:var(--font-num);font-weight:700;color:var(--ink);
+  font-size:max(8px,calc(100cqw / 11 * .3));
+  text-shadow:0 0 3px var(--halo),0 0 3px var(--halo),0 0 2px var(--halo);
+}
+.lab small{
+  align-self:center;margin-top:auto;margin-bottom:3px;
+  font-family:var(--font-body);font-weight:900;font-size:.86em;
+}
+
+/* Trees */
+.ground{fill:var(--tree-dark);opacity:.3}
+.trunk-edge{fill:none;stroke:var(--trunk-dark);stroke-width:30;stroke-linecap:round}
+.trunk{fill:none;stroke:var(--trunk);stroke-width:20;stroke-linecap:round}
+.branch{fill:none;stroke:var(--trunk-dark);stroke-width:8;stroke-linecap:round}
+.leaf-dark{fill:var(--tree-dark)}
+.leaf{fill:var(--tree)}
+.leaf-hi{fill:var(--tree-light);opacity:.75}
+/* Swings */
+.sw-trail{fill:none;stroke:var(--swing-light);stroke-width:20;stroke-linecap:round;opacity:.6}
+.sw-dots{fill:none;stroke:var(--swing-dark);stroke-width:7;stroke-linecap:round;stroke-dasharray:1 15}
+.sw-arrow{fill:var(--swing-dark);stroke:var(--surface);stroke-width:3;stroke-linejoin:round}
+.sw-bar{fill:none;stroke:var(--swing-dark);stroke-linecap:round}
+.sw-rope{fill:none;stroke:var(--ink);stroke-linecap:round;opacity:.7}
+.sw-seat{fill:var(--swing);stroke:var(--swing-dark);stroke-width:2}
+
+/* Pond, ducks, rain */
+.pond{opacity:0;transition:opacity .9s}
+.pond.on{opacity:1}
+.pond-water{fill:var(--pond);stroke:var(--pond-dark);stroke-width:6}
+.pond-shine{fill:none;stroke:var(--pond-light);stroke-width:4;stroke-linecap:round}
+.pd-body{fill:var(--duck);stroke:var(--beak);stroke-width:1.5}
+.pd-wing{fill:var(--beak);opacity:.35}
+.pd-beak{fill:var(--beak)}
+.pd-eye{fill:var(--ink)}
+.duck{
+  position:absolute;z-index:4;width:calc(100% / 11 * .55);aspect-ratio:1;transform:translate(-50%,-50%);
+  opacity:0;pointer-events:none;transition:opacity .4s;
+}
+.duck svg{width:100%;height:100%;display:block}
+.duck.show{opacity:1}
+.duck.run{transition:left 1.2s ease-in-out,top 1.2s ease-in-out,opacity .4s}
+.rain{
+  position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden;
+  background:var(--rain-veil);opacity:0;transition:opacity .5s;
+}
+.rain.on{opacity:1}
+.rain i{
+  position:absolute;top:-12%;width:2px;height:7%;border-radius:2px;background:var(--rain);opacity:.8;
+  animation:fall .7s linear infinite;
+}
+@keyframes fall{to{transform:translateY(1600%)}}
+
+/* Notice box in the middle of the screen */
+.notice{
+  position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:24px;pointer-events:none;
+  background:rgba(10,20,30,.25);opacity:0;visibility:hidden;transition:opacity .25s,visibility 0s .25s;
+}
+.notice.on{opacity:1;visibility:visible;transition:opacity .25s}
+.notice-box{
+  max-width:min(420px,100%);padding:20px 24px;text-align:center;
+  background:var(--surface);color:var(--ink);border:4px solid var(--nc,var(--edge));border-radius:20px;
+  box-shadow:0 12px 40px rgba(0,0,0,.35);transform:scale(.94);transition:transform .25s;
+}
+.notice.on .notice-box{transform:scale(1)}
+.notice-main{margin:0;font-size:22px;font-weight:900;line-height:1.35;text-wrap:balance}
+.notice-hint{margin:8px 0 0;font-size:16px;font-weight:700;color:var(--muted)}
+
+/* Tornadoes */
+.tornado{opacity:0;transition:opacity .8s}
+.tornado.on{opacity:1}
+.tw-body{fill:var(--twister);opacity:.7}
+.tw-line{fill:none;stroke:var(--twister-light);stroke-width:3;stroke-linecap:round;stroke-dasharray:14 10;animation:swirl .8s linear infinite}
+.tw-bit{fill:var(--twister)}
+.tw-sway{animation:sway 1.4s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes swirl{to{stroke-dashoffset:-48}}
+@keyframes sway{from{transform:skewX(-7deg)}to{transform:skewX(7deg)}}
+
+/* Storm and fireworks */
+.storm{
+  position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden;
+  background:rgba(18,26,46,.3);opacity:0;transition:opacity .6s;
+}
+.storm.on{opacity:1}
+.storm:not(.on) *{animation-play-state:paused}
+.wind{position:absolute;inset:0}
+.wind i{
+  position:absolute;left:-30%;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.85));
+  animation:gust 1s linear infinite;
+}
+@keyframes gust{to{transform:translateX(calc(100cqw * 1.4))}}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;animation:flash 6s infinite}
+@keyframes flash{0%,100%{opacity:0}2%{opacity:.7}4%{opacity:0}6%{opacity:.45}9%{opacity:0}}
+.bolt{
+  position:absolute;top:3%;right:20%;width:11%;fill:#FFF3A6;stroke:#F2B705;stroke-width:3;stroke-linejoin:round;
+  opacity:0;animation:bolt 6s infinite;filter:drop-shadow(0 0 6px #fff);
+}
+@keyframes bolt{0%,100%{opacity:0}2%{opacity:1}4.5%{opacity:0}6%{opacity:.8}8.5%{opacity:0}}
+.fw{
+  position:absolute;inset:0;width:100%;height:100%;z-index:6;pointer-events:none;display:none;
+  background:rgba(8,12,28,.78);
+}
+.fw.on{display:block}
+
+.tokens{--ts:1;position:absolute;inset:0;pointer-events:none}
+.tokens[data-n="2"]{--ts:.92}
+.tokens[data-n="3"],.tokens[data-n="4"]{--ts:.84}
+.tok{
+  position:absolute;z-index:2;width:calc(100% / 11 * var(--ts));aspect-ratio:1;transform:translate(-50%,-50%);
+  display:grid;place-items:center;border-radius:50%;background:var(--pc);color:var(--on);
+  border:2px solid var(--surface);box-shadow:0 2px 4px rgba(0,0,0,.35);
+  font:700 calc(100cqw / 11 * var(--ts) * .56)/1 var(--font-num);
+  transition:left .2s ease-out,top .2s ease-out;
+}
+.tok.go{z-index:3;box-shadow:0 4px 8px rgba(0,0,0,.45)}
+.tok.riding{transition:left .9s ease-in-out,top .9s ease-in-out}
+
+.win{position:absolute;inset:0;z-index:7;display:grid;place-items:end center;padding:16px;pointer-events:none}
+.win-card{pointer-events:auto}
+.win-card{
+  background:var(--surface);border:3px solid var(--edge);border-radius:18px;padding:20px 24px;text-align:center;
+  max-width:300px;display:grid;gap:10px;justify-items:center;
+}
+.win-card h2{margin:0;font-size:24px;font-weight:900;text-wrap:balance}
+.win-card p{margin:0;color:var(--muted);font-size:14px}
+
+/* Side panel */
+.side{grid-area:side;display:grid;gap:14px;min-width:0}
+.card h2{margin:0 0 10px;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.08em}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border:2px solid var(--line);border-radius:12px;
+  font-size:14px;font-weight:500;
+}
+.chip[aria-current="true"]{border-color:var(--pc);box-shadow:0 0 0 2px var(--pc)}
+.chip .at{font-variant-numeric:tabular-nums;color:var(--muted)}
+.ctl{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.seg{display:flex;border:2px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{padding:8px 13px;border:0;background:transparent;color:var(--ink);font-size:14px;font-weight:700;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.btn{
+  padding:9px 16px;border:2px solid var(--ink);border-radius:12px;background:var(--surface);color:var(--ink);
+  font-size:14px;font-weight:700;cursor:pointer;
+}
+.btn:hover{background:var(--tile-a)}
+.btn.primary{background:var(--tree);border-color:var(--tree-dark);color:var(--on-accent)}
+.btn.primary:hover{background:var(--tree)}
+.legend{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
+.legend li{display:flex;align-items:center;gap:10px;font-size:14px}
+.ico{width:44px;height:30px;flex:none}
+.rules{margin:0;padding-left:1.2em;color:var(--muted);font-size:13px;display:grid;gap:2px}
+
+@media (prefers-reduced-motion:reduce){
+  .dice.rolling .d{animation:none}
+  .tok,.tok.riding{transition-duration:.05s}
+  .rain i{animation:none}
+  .storm *{animation:none}
+  .tw-sway,.tw-line,.sun-rays{animation:none}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="head">
+    <h1>爬樹盪鞦韆棋</h1>
+    <p>在公園裡走 11 × 11 格,從第 1 格走到第 121 格</p>
+  </header>
+
+  <section class="card roll" aria-label="擲骰子">
+    <button id="die" class="dice" type="button" aria-label="擲兩顆骰子">
+      <span class="d"><span id="face1" class="face q">?</span></span>
+      <span class="d"><span id="face2" class="face q">?</span></span>
+    </button>
+    <div class="say" aria-live="polite">
+      <p class="turn" id="turn"></p>
+      <p class="msg" id="msg"></p>
+    </div>
+  </section>
+
+  <div class="board-wrap">
+    <div class="board" id="board">
+      <div class="tiles" id="tiles"></div>
+      <svg class="paths" id="paths" viewBox="0 0 1100 1100" aria-hidden="true"></svg>
+      <div class="labels" id="labels"></div>
+      <div class="tokens" id="tokens"></div>
+      <div class="rain" id="rain"></div>
+      <div class="storm" id="storm" aria-hidden="true">
+        <div class="wind" id="wind"></div>
+        <svg class="bolt" viewBox="0 0 60 120"><polygon points="34,0 10,66 28,66 18,120 52,48 32,48 44,0"/></svg>
+        <div class="flash"></div>
+      </div>
+      <div class="duck" id="duck1"></div>
+      <div class="duck" id="duck2"></div>
+      <canvas class="fw" id="fw" aria-hidden="true"></canvas>
+      <div class="win" id="win" hidden>
+        <div class="win-card">
+          <h2 id="winTitle"></h2>
+          <p id="winSub"></p>
+          <button id="again" class="btn primary" type="button">再玩一次</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="side">
+    <div class="card">
+      <h2>目前位置 · <span id="cnt"></span></h2>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="card">
+      <h2>玩家人數</h2>
+      <div class="ctl">
+        <div class="seg" role="group" aria-label="玩家人數">
+          <button id="pc1" type="button" data-n="1" aria-pressed="false">1 人</button>
+          <button id="pc2" type="button" data-n="2" aria-pressed="true">2 人</button>
+          <button id="pc3" type="button" data-n="3" aria-pressed="false">3 人</button>
+          <button id="pc4" type="button" data-n="4" aria-pressed="false">4 人</button>
+        </div>
+        <button id="restart" class="btn" type="button">重新開始</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>玩法</h2>
+      <ul class="legend">
+        <li>
+          <svg class="ico" viewBox="0 0 44 30" aria-hidden="true">
+            <line class="trunk-edge" style="stroke-width:9" x1="22" y1="28" x2="22" y2="14"/>
+            <line class="trunk" style="stroke-width:5" x1="22" y1="28" x2="22" y2="14"/>
+            <circle class="leaf-dark" cx="22" cy="11" r="10"/><circle class="leaf-dark" cx="13" cy="14" r="8"/><circle class="leaf-dark" cx="31" cy="14" r="8"/>
+            <circle class="leaf" cx="22" cy="11" r="8"/><circle class="leaf" cx="13" cy="14" r="6"/><circle class="leaf" cx="31" cy="14" r="6"/>
+          </svg>
+          <span>樹:停在樹下,就爬到樹上</span>
+        </li>
+        <li>
+          <svg class="ico" viewBox="0 0 44 30" aria-hidden="true">
+            <line class="sw-bar" style="stroke-width:3" x1="10" y1="4" x2="34" y2="4"/>
+            <line class="sw-bar" style="stroke-width:3" x1="10" y1="4" x2="5" y2="28"/>
+            <line class="sw-bar" style="stroke-width:3" x1="34" y1="4" x2="39" y2="28"/>
+            <line class="sw-rope" style="stroke-width:1.5" x1="17" y1="4" x2="17" y2="18"/>
+            <line class="sw-rope" style="stroke-width:1.5" x1="27" y1="4" x2="27" y2="18"/>
+            <rect class="sw-seat" x="14" y="18" width="16" height="5" rx="2"/>
+          </svg>
+          <span>鞦韆:停在鞦韆上,就盪到下面</span>
+        </li>
+        <li>
+          <svg class="ico" viewBox="0 0 44 30" aria-hidden="true">
+            <ellipse class="pond-water" style="stroke-width:2" cx="22" cy="17" rx="19" ry="11"/>
+            <g transform="translate(10 2) scale(.5)"><ellipse class="pd-body" cx="18" cy="26" rx="14" ry="9"/><circle class="pd-body" cx="28" cy="14" r="8"/><ellipse class="pd-wing" cx="15" cy="26" rx="7" ry="4"/><polygon class="pd-beak" points="34,11 42,15 34,19"/><circle class="pd-eye" cx="30.5" cy="12.5" r="1.8"/></g>
+          </svg>
+          <span>水池(第 35 到 40、60 到 65、90 到 95 格):雨後才會出現,停在上面會被鴨子趕回起點</span>
+        </li>
+        <li>
+          <svg class="ico" viewBox="0 0 44 30" aria-hidden="true">
+            <path class="tw-body" d="M8 2Q6 12 19 28L25 28Q38 12 36 2Z"/>
+            <path class="tw-line" style="stroke-width:2;animation:none" d="M12 8Q22 12 32 8"/>
+            <path class="tw-line" style="stroke-width:2;animation:none" d="M14 15Q22 19 30 15"/>
+            <path class="tw-line" style="stroke-width:2;animation:none" d="M17 22Q22 25 27 22"/>
+          </svg>
+          <span>龍捲風(第 60 到 65、115 到 120 格):打雷颳風時出現,停在上面會被吹退 25 格</span>
+        </li>
+        <li>
+          <svg class="ico" viewBox="0 0 44 30" aria-hidden="true">
+            <path d="M5 25A17 17 0 0 1 39 25" fill="none" stroke="#E5484D" stroke-width="3"/>
+            <path d="M9 25A13 13 0 0 1 35 25" fill="none" stroke="#F2D338" stroke-width="3"/>
+            <path d="M13 25A9 9 0 0 1 31 25" fill="none" stroke="#4CB87A" stroke-width="3"/>
+            <path d="M17 25A5 5 0 0 1 27 25" fill="none" stroke="#4A90E2" stroke-width="3"/>
+          </svg>
+          <span>彩虹(第 118 到 120 格):太陽出來後出現,停在上面就直接到終點</span>
+        </li>
+      </ul>
+      <ol class="rules">
+        <li>點一下骰子,兩顆點數相加就是步數。</li>
+        <li>剛好走到第 121 格就獲勝。</li>
+        <li>點數超過 121 時,會從終點倒退走回來。</li>
+        <li>公園第 <b data-ev="RAIN">10</b> 次擲骰(所有玩家一起算)會突然下雨,雨停後第 35 到 40、60 到 65、90 到 95 格出現水池。</li>
+        <li>水池會一直留到第 <b data-ev="GONE_PREV">18</b> 次擲骰,第 <b data-ev="GONE">19</b> 次擲骰時消失。</li>
+        <li>第 <b data-ev="STORM_FROM">20</b> 到 <b data-ev="STORM_TO">28</b> 次擲骰會打雷颳風,龍捲風出現,這段時間停在第 60 到 65、115 到 120 格,會被吹退 25 格。</li>
+        <li>人數多時關卡會晚一點出現:3 人玩所有次數 ×1.5、4 人玩 ×2(無條件進位)。</li>
+        <li>有人到達終點,就會放出他的動物形狀煙火。</li>
+        <li>第 <b data-ev="SUN">35</b> 次擲骰後,太陽會出來照亮第 118 到 120 格,接著出現彩虹。</li>
+      </ol>
+    </div>
+  </section>
+</div>
+
+<div class="notice" id="notice" role="status" aria-live="assertive">
+  <div class="notice-box">
+    <p class="notice-main" id="noticeMain"></p>
+    <p class="notice-hint" id="noticeHint"></p>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const LAST = 121;
+const PONDS = [[35, 40], [60, 65], [90, 95]], EV_BASE = {RAIN: 10, GONE: 19, STORM_FROM: 20, STORM_TO: 28, SUN: 35};
+const WIND_ZONES = [[60, 65], [115, 120]], WIND_BACK = 25;
+const inZone = (zones, n) => zones.some(([a, b]) => n >= a && n <= b);
+/* With more players the whole game takes more rolls: 3 players x1.5, 4 players x2 (rounded up). */
+const evMult = n => n === 3 ? 1.5 : n === 4 ? 2 : 1;
+const evAt = k => Math.ceil(EV_BASE[k] * evMult(S ? S.n : 2));
+const RAINBOW_ZONE = [118, 120];
+/* tree: base square -> square up in the branches; swing: seat square -> square it throws you to */
+const TREES = {4:25, 14:34, 28:51, 42:68, 47:70, 58:82, 76:98, 84:105};
+const SWINGS = {112:88, 103:81, 66:43, 44:18};
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const f = n => Math.round(n * 10) / 10;
+
+const dieEl = $('die'), faceEls = [$('face1'), $('face2')], turnEl = $('turn'), msgEl = $('msg');
+const tilesEl = $('tiles'), labelsEl = $('labels'), pathsEl = $('paths'), tokensEl = $('tokens');
+const chipsEl = $('chips'), winEl = $('win'), rainEl = $('rain'), stormEl = $('storm');
+
+let S = null;
+let noticeSeq = 0;
+const noticeEl = $('notice');
+let toks = [];
+
+/* ---------- board geometry ---------- */
+function cellPos(n){
+  const i = n - 1, row = Math.floor(i / 11);
+  let col = i % 11;
+  if (row % 2 === 1) col = 10 - col;
+  return { col, row, gr: 10 - row };
+}
+function center(n){
+  const c = cellPos(n);
+  return [(c.col + .5) * 100, (c.gr + .5) * 100];
+}
+
+function arrow(x, y, ux, uy, cls){
+  const px = -uy, py = ux, s = 17;
+  const tx = x + ux * s * 1.1, ty = y + uy * s * 1.1;
+  const bx = x - ux * s * .5, by = y - uy * s * .5;
+  return `<polygon class="${cls}" points="${f(tx)},${f(ty)} ${f(bx + px * s)},${f(by + py * s)} ${f(bx - px * s)},${f(by - py * s)}"/>`;
+}
+
+/* A trunk from the base square up to a leafy crown on the target square. */
+function treeArt(a, b){
+  const [x1, y1] = center(a), [x2, y2] = center(b);
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, px = -uy, py = ux;
+  let s = `<ellipse class="ground" cx="${f(x1)}" cy="${f(y1 + 18)}" rx="28" ry="10"/>`;
+  s += `<line class="trunk-edge" x1="${f(x1)}" y1="${f(y1 + 4)}" x2="${f(x2)}" y2="${f(y2)}"/>`;
+  s += `<line class="trunk" x1="${f(x1)}" y1="${f(y1 + 4)}" x2="${f(x2)}" y2="${f(y2)}"/>`;
+  const nb = L > 260 ? 3 : 2;
+  for (let i = 1; i <= nb; i++){
+    const t = i / (nb + 1) * .88 + .02, side = i % 2 ? 1 : -1;
+    const bx = x1 + dx * t, by = y1 + dy * t;
+    const ex = bx + px * side * 26 + ux * 8, ey = by + py * side * 26 + uy * 8;
+    s += `<line class="branch" x1="${f(bx)}" y1="${f(by)}" x2="${f(ex)}" y2="${f(ey)}"/>` +
+      `<circle class="leaf-dark" cx="${f(ex)}" cy="${f(ey)}" r="12"/><circle class="leaf" cx="${f(ex)}" cy="${f(ey)}" r="8.5"/>`;
+  }
+  const C = [[0, 0, 32], [-22, 9, 23], [22, 9, 23], [0, -21, 23]];
+  s += C.map(([ox, oy, r]) => `<circle class="leaf-dark" cx="${f(x2 + ox)}" cy="${f(y2 + oy)}" r="${r + 4}"/>`).join('');
+  s += C.map(([ox, oy, r]) => `<circle class="leaf" cx="${f(x2 + ox)}" cy="${f(y2 + oy)}" r="${r}"/>`).join('');
+  s += `<circle class="leaf-hi" cx="${f(x2 - 10)}" cy="${f(y2 - 12)}" r="8"/><circle class="leaf-hi" cx="${f(x2 + 14)}" cy="${f(y2 - 20)}" r="6"/>`;
+  return s;
+}
+
+/* A swing frame on the seat square and a dotted arc to where it throws you. */
+function swingArt(a, b){
+  const [x1, y1] = center(a), [x2, y2] = center(b);
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), px = -dy / L, py = dx / L;
+  const k = Math.min(90, L * .3) * (a % 2 ? 1 : -1);
+  const cx = (x1 + x2) / 2 + px * k, cy = (y1 + y2) / 2 + py * k;
+  const d = `M${f(x1)} ${f(y1)}Q${f(cx)} ${f(cy)} ${f(x2)} ${f(y2)}`;
+  const tx = x2 - cx, ty = y2 - cy, tl = Math.hypot(tx, ty);
+  let s = `<path class="sw-trail" d="${d}"/><path class="sw-dots" d="${d}"/>`;
+  s += arrow(x2, y2, tx / tl, ty / tl, 'sw-arrow');
+  s += `<g transform="translate(${f(x1)} ${f(y1)}) scale(.85)">` +
+    `<line class="sw-bar" style="stroke-width:8" x1="-24" y1="-34" x2="24" y2="-34"/>` +
+    `<line class="sw-bar" style="stroke-width:7" x1="-24" y1="-34" x2="-40" y2="36"/>` +
+    `<line class="sw-bar" style="stroke-width:7" x1="24" y1="-34" x2="40" y2="36"/>` +
+    `<line class="sw-rope" style="stroke-width:3" x1="-12" y1="-34" x2="-12" y2="12"/>` +
+    `<line class="sw-rope" style="stroke-width:3" x1="12" y1="-34" x2="12" y2="12"/>` +
+    `<rect class="sw-seat" x="-19" y="10" width="38" height="10" rx="4"/></g>`;
+  return s;
+}
+
+const duckInner = () =>
+  `<ellipse class="pd-body" cx="18" cy="26" rx="14" ry="9"/><circle class="pd-body" cx="28" cy="14" r="8"/>` +
+  `<ellipse class="pd-wing" cx="15" cy="26" rx="7" ry="4"/><polygon class="pd-beak" points="34,11 42,15 34,19"/>` +
+  `<circle class="pd-eye" cx="30.5" cy="12.5" r="1.8"/>`;
+
+/* A pond across a stretch of squares in one row, hidden until the rain has passed. */
+function pondArt(a, b){
+  const [x1, y] = center(a), [x2] = center(b);
+  const l = Math.min(x1, x2) - 44, w = Math.abs(x2 - x1) + 88;
+  const duck = (dx, dy, sx) => `<g transform="translate(${f(l + dx)} ${y + dy}) scale(${sx * .7} .7)">${duckInner()}</g>`;
+  return `<g class="pond">` +
+    `<rect class="pond-water" x="${f(l)}" y="${y - 37}" width="${f(w)}" height="74" rx="37"/>` +
+    `<path class="pond-shine" d="M${f(l + 44)} ${y + 14}q10 -8 22 -2"/><path class="pond-shine" d="M${f(l + w - 90)} ${y + 22}q10 -6 22 -1"/>` +
+    duck(w * .12, -26, 1) + duck(w * .52 + 28, -8, -1) + duck(w * .8, -26, 1) + `</g>`;
+}
+
+/* One tornado on every square of a stretch, shown while the storm is on. */
+function tornadoArt(a, b){
+  const sq = Array.from({length: b - a + 1}, (_, i) => a + i);
+  const one = (n, i) => { const [x, y] = center(n); return `<g transform="translate(${f(x)} ${y + 3}) scale(.9)"><g class="tw-sway" style="animation-delay:${-(i % 3) * .5}s">` +
+    `<path class="tw-body" d="M-34 -58Q-40 -18 -8 44L8 44Q40 -18 34 -58Z"/>` +
+    [-48, -30, -12, 6, 24].map((ty, k) => `<path class="tw-line" d="M${-30 + k * 5} ${ty}Q0 ${ty + 9} ${30 - k * 5} ${ty}"/>`).join('') +
+    `<circle class="tw-bit" cx="-44" cy="-22" r="3.5"/><circle class="tw-bit" cx="40" cy="-40" r="3"/><circle class="tw-bit" cx="30" cy="-6" r="2.5"/>` +
+    `</g></g>`; };
+  return `<g class="tornado">` + sq.map(one).join('') + `</g>`;
+}
+
+/* Rainbows on a stretch of squares, shown after the sun comes out. */
+function rainbowArt(a, b){
+  const cols = ['#E5484D', '#F2994A', '#F2D338', '#4CB87A', '#4A90E2', '#8E5BD6'];
+  let s = '';
+  for (let n = a; n <= b; n++){
+    const [x, y] = center(n), by = y + 26;
+    s += cols.map((c, i) => {
+      const r = 38 - i * 5.5;
+      return `<path d="M${f(x - r)} ${by}A${f(r)} ${f(r)} 0 0 1 ${f(x + r)} ${by}" fill="none" stroke="${c}" stroke-width="5.5"/>`;
+    }).join('');
+    s += `<ellipse class="rb-cloud" cx="${x - 36}" cy="${by - 2}" rx="11" ry="7"/><ellipse class="rb-cloud" cx="${x + 36}" cy="${by - 2}" rx="11" ry="7"/>`;
+  }
+  return `<g class="rainbow">${s}</g>`;
+}
+
+/* A little house on the finish square. */
+function houseArt(){
+  const [x, y] = center(LAST);
+  return `<g transform="translate(${x} ${y - 6})">` +
+    `<rect class="hs-chim" x="16" y="-40" width="9" height="18"/>` +
+    `<rect class="hs-wall" x="-30" y="-8" width="60" height="42" rx="3"/>` +
+    `<polygon class="hs-roof" points="-38,-6 0,-40 38,-6"/>` +
+    `<rect class="hs-door" x="-8" y="12" width="16" height="22" rx="2"/>` +
+    `<rect class="hs-win" x="-25" y="2" width="12" height="12" rx="1.5"/><rect class="hs-win" x="13" y="2" width="12" height="12" rx="1.5"/>` +
+    `</g>`;
+}
+
+/* The sun peeks in over the top row and lights up the rainbow squares. */
+function sunArt(){
+  const [x] = center(Math.floor((RAINBOW_ZONE[0] + RAINBOW_ZONE[1]) / 2));
+  const rays = Array.from({length: 12}, (_, i) => {
+    const a = i * Math.PI / 6;
+    return `<line class="sun-ray" x1="${f(Math.cos(a) * 42)}" y1="${f(Math.sin(a) * 42)}" x2="${f(Math.cos(a) * 58)}" y2="${f(Math.sin(a) * 58)}"/>`;
+  }).join('');
+  return `<g id="sun" class="sun">` +
+    `<polygon class="sun-beam" points="${f(x - 22)},40 ${f(x + 22)},40 ${f(x + 160)},104 ${f(x - 160)},104"/>` +
+    `<g transform="translate(${f(x)} 30)"><g class="sun-rays">${rays}</g><circle class="sun-disc" r="30"/></g></g>`;
+}
+
+function buildBoard(){
+  let t = '', l = '';
+  for (let gr = 0; gr < 11; gr++){
+    for (let col = 0; col < 11; col++){
+      const row = 10 - gr;
+      const n = row * 11 + (row % 2 === 0 ? col + 1 : 11 - col);
+      const cls = n === 1 ? 'start' : n === LAST ? 'end' : ((row + col) % 2 ? 'b' : 'a');
+      t += `<div class="tile ${cls}"></div>`;
+      const sub = n === 1 ? '<small>起點</small>' : n === LAST ? '<small>終點</small>' : '';
+      l += `<div class="lab"><b>${n}</b>${sub}</div>`;
+    }
+  }
+  tilesEl.innerHTML = t;
+  labelsEl.innerHTML = l;
+  pathsEl.innerHTML =
+    Object.entries(TREES).map(([a, b]) => treeArt(+a, +b)).join('') +
+    Object.entries(SWINGS).map(([a, b]) => swingArt(+a, +b)).join('') +
+    PONDS.map(([a, b]) => pondArt(a, b)).join('') +
+    WIND_ZONES.map(([a, b]) => tornadoArt(a, b)).join('') +
+    rainbowArt(RAINBOW_ZONE[0], RAINBOW_ZONE[1]) + houseArt() + sunArt();
+  $('wind').innerHTML = Array.from({length: 16}, (_, i) =>
+    `<i style="top:${(i * 13 + 7) % 96}%;width:${18 + (i % 3) * 8}%;animation-delay:${-(i % 6) * .18}s;animation-duration:${.8 + (i % 4) * .18}s"></i>`).join('');
+  rainEl.innerHTML = Array.from({length: 34}, (_, i) =>
+    `<i style="left:${(i * 37 + 11) % 100}%;animation-delay:${-(i % 7) * .1}s;animation-duration:${.55 + (i % 5) * .07}s"></i>`).join('');
+  document.querySelectorAll('.duck').forEach(d => {
+    d.innerHTML = `<svg viewBox="0 0 44 40" aria-hidden="true">${duckInner()}</svg>`;
+  });
+}
+
+/* ---------- dice ---------- */
+const PIPS = {1:[5], 2:[1,9], 3:[1,5,9], 4:[1,3,7,9], 5:[1,3,5,7,9], 6:[1,3,4,6,7,9]};
+const r6 = () => 1 + Math.floor(Math.random() * 6);
+function showFaces(arr){
+  faceEls.forEach((el, i) => {
+    const v = arr && arr[i];
+    if (!v){ el.className = 'face q'; el.textContent = '?'; return; }
+    el.className = 'face';
+    el.innerHTML = Array.from({length: 9}, (_, k) => `<i${PIPS[v].includes(k + 1) ? ' class="on"' : ''}></i>`).join('');
+  });
+}
+
+/* ---------- tokens ---------- */
+/* ---------- pet icons for the players: cat, dog, turtle, rabbit ---------- */
+const PET_SVG = [
+  `<polygon class="pf" points="7,17 9,5 18,11"/><polygon class="pf" points="33,17 31,5 22,11"/>` +
+  `<ellipse class="pf" cx="20" cy="23" rx="14" ry="12"/>` +
+  `<circle class="pd" cx="14.5" cy="21.5" r="2"/><circle class="pd" cx="25.5" cy="21.5" r="2"/>` +
+  `<polygon fill="#F28CA8" points="18.5,25 21.5,25 20,27"/><g class="hp"><path class="pl" d="M17 29q3 2.4 6 0"/></g>`+
+  `<g class="sd"><path fill="#5BB7F0" stroke="#2F7FB8" stroke-width=".6" d="M14.5 23.7q-1.8 2.6 0 3.4q1.8-.8 0-3.4z"/><path fill="#5BB7F0" stroke="#2F7FB8" stroke-width=".6" d="M25.5 23.7q-1.8 2.6 0 3.4q1.8-.8 0-3.4z"/><path class="pl" d="M17 31q3-2.4 6 0"/><path class="pl" d="M12 18.5L17 17.5"/><path class="pl" d="M28 18.5L23 17.5"/></g>` +
+  `<path class="pl" d="M6 25l7 1.5M6 29.5l7-1.5M34 25l-7 1.5M34 29.5l-7-1.5"/>`,
+  `<ellipse class="pe" cx="9" cy="19" rx="5" ry="9.5" transform="rotate(12 9 19)"/>` +
+  `<ellipse class="pe" cx="31" cy="19" rx="5" ry="9.5" transform="rotate(-12 31 19)"/>` +
+  `<ellipse class="pf" cx="20" cy="22" rx="12.5" ry="12"/><ellipse cx="20" cy="27" rx="6.5" ry="5" fill="#F4E3C8"/>` +
+  `<circle class="pd" cx="15" cy="20" r="2"/><circle class="pd" cx="25" cy="20" r="2"/>` +
+  `<ellipse class="pd" cx="20" cy="25" rx="3" ry="2.2"/><g class="hp"><path class="pl" d="M20 27v2M17 30q3 2 6 0"/></g>`+
+  `<g class="sd"><path fill="#5BB7F0" stroke="#2F7FB8" stroke-width=".6" d="M15 22.2q-1.8 2.6 0 3.4q1.8-.8 0-3.4z"/><path fill="#5BB7F0" stroke="#2F7FB8" stroke-width=".6" d="M25 22.2q-1.8 2.6 0 3.4q1.8-.8 0-3.4z"/><path class="pl" d="M20 27v2M17 32q3-2.2 6 0"/><path class="pl" d="M12 16.5L17 15.8"/><path class="pl" d="M28 16.5L23 15.8"/></g>`,
+  `<circle class="tg" cx="20" cy="6.5" r="4"/><ellipse class="tg" cx="8" cy="13" rx="3.5" ry="2.8"/><ellipse class="tg" cx="32" cy="13" rx="3.5" ry="2.8"/>` +
+  `<ellipse class="tg" cx="8" cy="29" rx="3.5" ry="2.8"/><ellipse class="tg" cx="32" cy="29" rx="3.5" ry="2.8"/><polygon class="tg" points="18,32.5 22,32.5 20,37"/>` +
+  `<ellipse class="ts" cx="20" cy="21" rx="12.5" ry="13"/>` +
+  `<polygon class="tl" points="20,14 25.5,17.5 25.5,24.5 20,28 14.5,24.5 14.5,17.5"/>` +
+  `<path class="tl" d="M20 14V9.5M25.5 17.5L30 14.5M25.5 24.5L30 27.5M20 28V32.5M14.5 24.5L10 27.5M14.5 17.5L10 14.5"/>` +
+  `<circle class="pd" cx="18.4" cy="6" r=".9"/><circle class="pd" cx="21.6" cy="6" r=".9"/>`+
+  `<g class="sd"><path fill="#5BB7F0" stroke="#2F7FB8" stroke-width=".6" d="M18.4 8.2q-1.8 2.6 0 3.4q1.8-.8 0-3.4z"/><path fill="#5BB7F0" stroke="#2F7FB8" stroke-width=".6" d="M21.6 8.2q-1.8 2.6 0 3.4q1.8-.8 0-3.4z"/><path class="pl" d="M18.5 9q1.5-1.4 3 0"/></g>`,
+  `<ellipse class="pf" cx="14" cy="10" rx="3.8" ry="8.5"/><ellipse class="pf" cx="26" cy="10" rx="3.8" ry="8.5"/>` +
+  `<ellipse cx="14" cy="10.5" rx="1.7" ry="5.5" fill="#F7A8BE"/><ellipse cx="26" cy="10.5" rx="1.7" ry="5.5" fill="#F7A8BE"/>` +
+  `<ellipse class="pf" cx="20" cy="26" rx="11.5" ry="10.5"/>` +
+  `<circle class="pd" cx="16" cy="24.5" r="1.9"/><circle class="pd" cx="24" cy="24.5" r="1.9"/>` +
+  `<circle cx="20" cy="28.5" r="1.6" fill="#F28CA8"/><g class="hp"><path class="pl" d="M20 30v1.3M17.5 32q2.5 1.8 5 0"/></g>`+
+  `<g class="sd"><path fill="#5BB7F0" stroke="#2F7FB8" stroke-width=".6" d="M16 26.7q-1.8 2.6 0 3.4q1.8-.8 0-3.4z"/><path fill="#5BB7F0" stroke="#2F7FB8" stroke-width=".6" d="M24 26.7q-1.8 2.6 0 3.4q1.8-.8 0-3.4z"/><path class="pl" d="M20 30v1.3M17.5 34q2.5-1.8 5 0"/><path class="pl" d="M13 21.5L18 20.8"/><path class="pl" d="M27 21.5L22 20.8"/></g>`
+];
+const petIcon = i => `<svg viewBox="0 0 40 40" aria-hidden="true">${PET_SVG[i]}</svg>`;
+
+const OFFS = {
+  1: [[0, 0]],
+  2: [[-.22, 0], [.22, 0]],
+  3: [[-.22, -.22], [.22, -.22], [-.22, .22]],
+  4: [[-.22, -.22], [.22, -.22], [-.22, .22], [.22, .22]]
+};
+function tokPlace(i, n){
+  const c = cellPos(n), o = OFFS[S.n][i], el = toks[i];
+  el.classList.toggle('left', c.col <= 1);
+  el.classList.toggle('right', c.col >= 9);
+  el.style.left = ((c.col + .5 + o[0]) / 11 * 100) + '%';
+  el.style.top = ((c.gr + .5 + o[1]) / 11 * 100) + '%';
+}
+function buildTokens(){
+  tokensEl.dataset.n = S.n;
+  tokensEl.innerHTML = S.pos.map((_, i) =>
+    `<div class="tok" style="--pc:var(--p${i + 1});--on:var(--on${i + 1})">${petIcon(i)}<i class="oh">OH NO ~~~</i></div>`).join('');
+  toks = [...tokensEl.children];
+  S.pos.forEach((p, i) => tokPlace(i, p));
+}
+
+/* ---------- status ---------- */
+const who = p => S.n === 1 ? '你' : `玩家 ${p + 1}`;
+function say(m){ S.msg = m; msgEl.textContent = m; }
+
+function renderChips(){
+  $('cnt').textContent = `已擲 ${S.total} 次${S.pond ? ' · 水池出現中' : ''}${S.storm ? ' · 打雷颳風中' : ''}${S.rainbow ? ' · 彩虹出現中' : ''}`;
+  chipsEl.innerHTML = S.pos.map((pos, i) =>
+    `<div class="chip" style="--pc:var(--p${i + 1});--on:var(--on${i + 1})"${i === S.turn && !S.over ? ' aria-current="true"' : ''}>` +
+    `<span class="dot">${petIcon(i)}</span><span>${who(i)}</span><span class="at">第 ${pos} 格</span></div>`).join('');
+}
+function renderTurn(){
+  if (S.over){ turnEl.textContent = '遊戲結束'; return; }
+  const p = S.turn;
+  turnEl.innerHTML = `<span class="dot" style="--pc:var(--p${p + 1});--on:var(--on${p + 1})">${petIcon(p)}</span>` +
+    `<span>${S.n === 1 ? '你的回合' : `輪到 玩家 ${p + 1}`}</span>`;
+}
+function syncDie(){ dieEl.disabled = S.busy || S.over; }
+function renderWin(){
+  winEl.hidden = !S.over;
+  if (!S.over){ stopFireworks(); return; }
+  const p = Math.max(0, S.pos.indexOf(LAST));
+  $('winTitle').textContent = S.n === 1 ? '到達終點!' : `${who(p)}獲勝!`;
+  $('winSub').textContent = `共擲了 ${S.rolls[p]} 次骰子`;
+  startFireworks(p + 1);
+}
+const setPond = on => document.querySelectorAll('.pond').forEach(g => g.classList.toggle('on', on));
+const setStorm = on => {
+  stormEl.classList.toggle('on', on);
+  document.querySelectorAll('.tornado').forEach(g => g.classList.toggle('on', on));
+};
+
+const setRainbow = on => document.querySelectorAll('.rainbow').forEach(g => g.classList.toggle('on', on));
+const setSun = on => $('sun').classList.toggle('on', on);
+
+function updateRules(){
+  document.querySelectorAll('[data-ev]').forEach(b => {
+    const k = b.dataset.ev;
+    b.textContent = k === 'GONE_PREV' ? evAt('GONE') - 1 : evAt(k);
+  });
+}
+
+function syncAll(){
+  updateRules();
+  showFaces(S.last);
+  msgEl.textContent = S.msg;
+  setPond(S.pond); setStorm(S.storm); setRainbow(S.rainbow); setSun(false);
+  renderChips(); renderTurn(); syncDie(); renderWin();
+  document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.n === S.n)));
+}
+
+/* ---------- game ---------- */
+function newGame(n, intro = true){
+  S = {
+    gid: S ? S.gid + 1 : 1, n, pos: Array(n).fill(1), turn: 0, busy: false, over: false,
+    rolls: Array(n).fill(0), total: 0, pond: false, storm: false, rainbow: false, last: null, msg: '點一下骰子,從第 1 格出發。'
+  };
+  dieEl.classList.remove('rolling');
+  rainEl.classList.remove('on');
+  noticeSeq++; noticeEl.classList.remove('on');
+  document.querySelectorAll('.duck').forEach(d => d.classList.remove('show', 'run'));
+  buildTokens();
+  syncAll();
+  if (intro){
+    const gid = S.gid;
+    S.busy = true; syncDie();
+    showNotice('小朋友們要回家囉！', '（誰先到家就贏了～）', 'home').then(() => {
+      if (S && gid === S.gid){ S.busy = false; syncDie(); }
+    });
+  }
+}
+
+/* A box in the middle of the screen that stays for about a second, then fades out. */
+function showNotice(main, hint, tone){
+  const mine = ++noticeSeq;
+  $('noticeMain').textContent = main;
+  $('noticeHint').textContent = hint || '';
+  const tones = {storm: 'var(--twister)', rain: 'var(--pond-dark)', home: 'var(--tree)', rainbow: 'var(--swing)'};
+  noticeEl.style.setProperty('--nc', tones[tone] || 'var(--edge)');
+  noticeEl.classList.add('on');
+  return new Promise(res => setTimeout(() => {
+    if (mine === noticeSeq) noticeEl.classList.remove('on');
+    setTimeout(res, 250);
+  }, 3000));
+}
+
+/* Two ducks hop out of the pond and chase the player's token back to square 1. */
+async function duckChase(p, el, gid, sq){
+  const dk = [$('duck1'), $('duck2')];
+  const at = (n, ox, oy) => {
+    const c = cellPos(n);
+    return [((c.col + .5 + ox) / 11 * 100) + '%', ((c.gr + .5 + oy) / 11 * 100) + '%'];
+  };
+  const from = [[-.2, .1], [.2, .15]], to = [[.3, -.05], [.45, .25]];
+  dk.forEach((d, i) => {
+    const [l, t] = at(sq, from[i][0], from[i][1]);
+    d.classList.remove('run'); d.style.transitionDelay = '';
+    d.style.left = l; d.style.top = t;
+    d.style.transform = 'translate(-50%,-50%) scaleX(-1)';
+    d.classList.add('show');
+  });
+  el.classList.add('oh-on');
+  await sleep(900);
+  if (gid !== S.gid) return;
+  el.classList.add('sad');
+  await sleep(600);
+  if (gid !== S.gid) return;
+  el.classList.add('riding');
+  dk.forEach((d, i) => {
+    const [l, t] = at(1, to[i][0], to[i][1]);
+    d.style.transitionDelay = `${.2 + i * .2}s,${.2 + i * .2}s,0s`;
+    d.classList.add('run'); d.style.left = l; d.style.top = t;
+  });
+  S.pos[p] = 1; tokPlace(p, 1); renderChips();
+  await sleep(1900);
+  if (gid !== S.gid) return;
+  dk.forEach(d => d.classList.remove('show'));
+  await sleep(500);
+  if (gid !== S.gid) return;
+  dk.forEach(d => { d.classList.remove('run'); d.style.transitionDelay = ''; });
+  el.classList.remove('riding', 'sad', 'oh-on');
+}
+
+async function roll(){
+  if (!S || S.busy || S.over) return;
+  const gid = S.gid, p = S.turn, d1 = r6(), d2 = r6(), v = d1 + d2;
+  S.busy = true; syncDie();
+  dieEl.classList.add('rolling');
+  say(`${who(p)}擲骰子…`);
+  for (let i = 0; i < 8; i++){
+    showFaces([r6(), r6()]);
+    await sleep(85);
+    if (gid !== S.gid) return;
+  }
+  dieEl.classList.remove('rolling');
+  S.last = [d1, d2]; showFaces(S.last); S.rolls[p]++; S.total++;
+  let note = '';
+  if (S.total === evAt('GONE')){
+    if (S.pond) note = '水池消失了,鴨子也回家了。';
+    S.pond = false; setPond(false);
+  }
+  if (S.total === evAt('STORM_FROM')){
+    S.storm = true; setStorm(true);
+    note = '天空變暗,打雷颳風,龍捲風出現了!';
+  }
+  say(`${who(p)}擲出 ${d1} + ${d2} = ${v},前進中${note ? ' ' + note : ''}`);
+  await (S.total === evAt('STORM_FROM')
+    ? showNotice('歐買尬！怎麼會有龍捲風？！', `（遇到龍捲風會倒退${WIND_BACK}格）`, 'storm')
+    : sleep(450));
+  if (gid !== S.gid) return;
+
+  let at = S.pos[p], dir = 1, bounced = false;
+  const path = [];
+  for (let i = 0; i < v; i++){
+    if (at === LAST && dir === 1){ dir = -1; bounced = true; }
+    at += dir; path.push(at);
+  }
+  const el = toks[p];
+  el.classList.add('go');
+  for (const sq of path){
+    S.pos[p] = sq; tokPlace(p, sq); renderChips();
+    await sleep(230);
+    if (gid !== S.gid) return;
+  }
+
+  let land = S.pos[p];
+  let m = bounced
+    ? `${who(p)}擲出 ${d1} + ${d2} = ${v},超過終點,倒退走到第 ${land} 格。`
+    : `${who(p)}擲出 ${d1} + ${d2} = ${v},走到第 ${land} 格。`;
+  if (note) m += ' ' + note;
+
+  let viaRainbow = false;
+  if (S.rainbow && land >= RAINBOW_ZONE[0] && land <= RAINBOW_ZONE[1]){
+    viaRainbow = true;
+    m += ' 踩到彩虹,直接通往終點!';
+    say(m);
+    await sleep(500);
+    if (gid !== S.gid) return;
+    el.classList.add('riding');
+    S.pos[p] = LAST; tokPlace(p, LAST); renderChips();
+    await sleep(1000);
+    if (gid !== S.gid) return;
+    el.classList.remove('riding');
+    land = LAST;
+  }
+
+  if (land === LAST){
+    el.classList.remove('go');
+    S.over = true; S.busy = false; S.storm = false;
+    say(viaRainbow ? m + ' 到家了!' : `${who(p)}擲出 ${d1} + ${d2} = ${v},剛好走到第 ${LAST} 格!`);
+    syncAll();
+    return;
+  }
+
+  const to = TREES[land] || SWINGS[land];
+  if (inZone(PONDS, land) && S.pond){
+    m += S.n === 1 ? ' 水池裡的鴨子追過來,把你趕回起點!' : ` 水池裡的鴨子追過來,把${who(p)}趕回起點!`;
+    say(m);
+    await sleep(400);
+    if (gid !== S.gid) return;
+    await duckChase(p, el, gid, land);
+    if (gid !== S.gid) return;
+  } else if (S.storm && inZone(WIND_ZONES, land)){
+    const back = land - WIND_BACK;
+    m += ` 龍捲風把${who(p)}捲走,往後吹了 ${WIND_BACK} 格,回到第 ${back} 格!`;
+    say(m);
+    el.classList.add('oh-on');
+    await sleep(900);
+    if (gid !== S.gid) return;
+    el.classList.add('sad');
+    await sleep(500);
+    if (gid !== S.gid) return;
+    el.classList.add('riding');
+    S.pos[p] = back; tokPlace(p, back); renderChips();
+    await sleep(1000);
+    if (gid !== S.gid) return;
+    el.classList.remove('riding', 'sad', 'oh-on');
+  } else if (to){
+    m += TREES[land] ? ` 停在大樹下,爬到第 ${to} 格!` : ` 坐上鞦韆,盪到第 ${to} 格。`;
+    say(m);
+    await sleep(400);
+    if (gid !== S.gid) return;
+    el.classList.add('riding');
+    S.pos[p] = to; tokPlace(p, to); renderChips();
+    await sleep(1000);
+    if (gid !== S.gid) return;
+    el.classList.remove('riding');
+  } else {
+    say(m);
+  }
+
+  el.classList.remove('go');
+  if (S.total === evAt('RAIN')){
+    say(m + ' 公園突然下起雨來了!');
+    rainEl.classList.add('on');
+    showNotice('下大雨淹水了，請小心鴨子。', '（遇到鴨子會把你追回起點）', 'rain');
+    await sleep(3300);
+    if (gid !== S.gid) return;
+    rainEl.classList.remove('on');
+    await sleep(700);
+    if (gid !== S.gid) return;
+    S.pond = true; setPond(true);
+    say(m + ' 雨停了,第 35 到 40、60 到 65、90 到 95 格出現了水池,水池裡有鴨子!');
+    await sleep(900);
+    if (gid !== S.gid) return;
+  }
+  if (S.total === evAt('SUN')){
+    say(m + ' 烏雲散開,太陽出來了,陽光照在第 118 到 120 格!');
+    setSun(true);
+    await sleep(2200);
+    if (gid !== S.gid) return;
+    S.rainbow = true; setRainbow(true);
+    await showNotice('彩虹出現～好運到！', '（遇到彩虹，直接通往終點）', 'rainbow');
+    if (gid !== S.gid) return;
+    setSun(false);
+    say(m + ' 第 118 到 120 格出現了彩虹,停在上面就直接到終點!');
+  }
+  if (S.total === evAt('STORM_TO')){
+    S.storm = false; setStorm(false);
+    say(m + ' 打雷颳風結束,龍捲風散了,天空放晴。');
+    await sleep(900);
+    if (gid !== S.gid) return;
+  }
+  S.turn = (S.turn + 1) % S.n;
+  S.busy = false;
+  renderChips(); renderTurn(); syncDie();
+}
+
+/* ---------- fireworks: bursts, plus one that spells the winner's number ---------- */
+const fwEl = $('fw');
+let fw = null;
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+
+function digitPoints(ch){
+  const c = document.createElement('canvas');
+  c.width = 200; c.height = 240;
+  const g = c.getContext('2d');
+  g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '900 200px Fredoka, "Noto Sans TC", sans-serif';
+  g.fillText(ch, 100, 125);
+  const d = g.getImageData(0, 0, 200, 240).data, pts = [];
+  for (let y = 0; y < 240; y += 5)
+    for (let x = 0; x < 200; x += 5)
+      if (d[(y * 200 + x) * 4 + 3] > 128) pts.push([(x - 100) / 240, (y - 120) / 240]);
+  return pts;
+}
+
+/* Sample a silhouette of the winner's animal (cat, dog, turtle, rabbit) so the firework draws it. */
+function petPoints(i){
+  return new Promise((res, rej) => {
+    const css = '.pf,.pe,.tg,.ts{fill:#000;stroke:#000;stroke-width:1.4}[fill]{fill:#fff}.pd{fill:#fff}' +
+      '.pl,.tl{fill:none;stroke:#fff;stroke-width:1.3;stroke-linecap:round}.sd{display:none}';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="240" height="240"><style>${css}</style>${PET_SVG[i]}</svg>`;
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = 240; c.height = 240;
+      const g = c.getContext('2d');
+      g.drawImage(img, 0, 0, 240, 240);
+      const d = g.getImageData(0, 0, 240, 240).data, pts = [];
+      for (let y = 0; y < 240; y += 5)
+        for (let x = 0; x < 240; x += 5){
+          const k = (y * 240 + x) * 4;
+          if (d[k + 3] > 128 && d[k] < 128) pts.push([(x - 120) / 250, (y - 120) / 250]);
+        }
+      pts.length > 20 ? res(pts) : rej(new Error('empty'));
+    };
+    img.onerror = rej;
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  });
+}
+
+let fwGen = 0;
+function fwSize(){
+  const dpr = window.devicePixelRatio || 1;
+  fw.w = fwEl.clientWidth; fw.h = fwEl.clientHeight;
+  fwEl.width = Math.round(fw.w * dpr); fwEl.height = Math.round(fw.h * dpr);
+  fw.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  fw.K = fw.h * .5;
+}
+
+function launch(kind, ts){
+  const w = fw.w, h = fw.h, shot = {kind, t0: ts};
+  if (kind === 'digit'){
+    shot.x = w / 2; shot.y = h * .36; shot.color = fw.color;
+    shot.parts = fw.pts.map(([px, py]) => ({tx: shot.x + px * fw.K, ty: shot.y + py * fw.K, d: Math.random() * .15}));
+  } else {
+    shot.x = w * (.15 + Math.random() * .7); shot.y = h * (.12 + Math.random() * .3);
+    shot.color = fw.palette[Math.floor(Math.random() * fw.palette.length)];
+    const n = 46, r = Math.min(w, h) * (.12 + Math.random() * .1);
+    shot.parts = Array.from({length: n}, (_, i) => {
+      const a = i / n * Math.PI * 2 + Math.random() * .2, s = r * (.6 + Math.random() * .4);
+      return {vx: Math.cos(a) * s, vy: Math.sin(a) * s, d: 0};
+    });
+  }
+  fw.shots.push(shot);
+}
+
+function drawShot(s, ts){
+  const ctx = fw.ctx, u = (ts - s.t0) / 1000, R = .6, e = u - R;
+  ctx.fillStyle = s.color; ctx.strokeStyle = s.color;
+  if (e < 0){
+    const y = fw.h + (s.y - fw.h) * easeOut(u / R);
+    ctx.globalAlpha = 1; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(s.x, y + 14); ctx.lineTo(s.x, y); ctx.stroke();
+    return true;
+  }
+  const life = s.kind === 'digit' ? 3.6 : 1.7;
+  if (e > life){ ctx.globalAlpha = 1; return false; }
+  ctx.globalAlpha = 1 - clamp01((e - (life - .8)) / .8);
+  for (const p of s.parts){
+    let x, y, r = 2;
+    if (s.kind === 'digit'){
+      const q = easeOut(clamp01((e - p.d) / .9));
+      x = s.x + (p.tx - s.x) * q; y = s.y + (p.ty - s.y) * q;
+      r = 1.6 + .7 * Math.sin(e * 9 + p.d * 40);
+    } else {
+      const q = easeOut(clamp01(e / 1.2));
+      x = s.x + p.vx * q; y = s.y + p.vy * q + fw.h * .05 * e * e;
+    }
+    ctx.beginPath(); ctx.arc(x, y, Math.max(.8, r), 0, 6.283); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  return true;
+}
+
+function fwFrame(ts){
+  if (!fw) return;
+  if (fwEl.clientWidth !== fw.w) fwSize();
+  if (ts > fw.nextRing){ launch('ring', ts); fw.nextRing = ts + 650 + Math.random() * 500; }
+  if (ts > fw.nextDigit){ launch('digit', ts); fw.nextDigit = ts + 4300; }
+  fw.ctx.clearRect(0, 0, fw.w, fw.h);
+  fw.ctx.globalCompositeOperation = 'lighter';
+  fw.shots = fw.shots.filter(s => drawShot(s, ts));
+  fw.ctx.globalCompositeOperation = 'source-over';
+  fw.raf = requestAnimationFrame(fwFrame);
+}
+
+function stopFireworks(){
+  fwGen++;
+  if (fw){ cancelAnimationFrame(fw.raf); fw = null; }
+  fwEl.classList.remove('on');
+}
+
+function startFireworks(n){
+  stopFireworks();
+  const gen = ++fwGen;
+  fwEl.classList.add('on');
+  petPoints(n - 1).catch(() => digitPoints(String(n))).then(pts => {
+    if (gen !== fwGen) return;
+    runFireworks(n, pts);
+  });
+}
+
+function runFireworks(n, pts){
+  const mine = getComputedStyle(fwEl).getPropertyValue('--p' + n).trim() || '#FFD23F';
+  fw = {
+    ctx: fwEl.getContext('2d'), pts, color: mine, shots: [], raf: 0, w: 0, h: 0, K: 0,
+    palette: [mine, '#FFD23F', '#FF6B6B', '#6FD3FF', '#B28DFF', '#7CF29C'], nextRing: 0, nextDigit: 0
+  };
+  fwSize();
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    const {ctx, w, h, K} = fw;
+    ctx.clearRect(0, 0, w, h); ctx.fillStyle = mine;
+    pts.forEach(([px, py]) => { ctx.beginPath(); ctx.arc(w / 2 + px * K, h * .36 + py * K, 2, 0, 6.283); ctx.fill(); });
+    return;
+  }
+  const t0 = performance.now();
+  fw.nextRing = t0 + 1800; fw.nextDigit = t0 + 4300;
+  launch('digit', t0);
+  fw.raf = requestAnimationFrame(fwFrame);
+}
+
+/* ---------- wiring ---------- */
+dieEl.addEventListener('click', roll);
+$('restart').addEventListener('click', () => newGame(S.n));
+$('again').addEventListener('click', () => newGame(S.n));
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => newGame(+b.dataset.n)));
+
+buildBoard();
+
+const boot = d => {
+  const n = d && Number.isInteger(d.n) && d.n >= 1 && d.n <= 4 ? d.n : 2;
+  const ok = !!(d && Array.isArray(d.pos) && d.pos.length === n &&
+      d.pos.every(x => Number.isInteger(x) && x >= 1 && x <= LAST));
+  newGame(n, !ok);
+  if (ok){
+    S.pos = d.pos.slice();
+    S.turn = Number.isInteger(d.turn) ? d.turn % n : 0;
+    S.over = !!d.over;
+    S.total = Number.isInteger(d.total) && d.total >= 0 ? d.total : 0;
+    S.pond = !!d.pond;
+    S.storm = !!d.storm;
+    S.rainbow = !!d.rainbow;
+    if (Array.isArray(d.rolls) && d.rolls.length === n) S.rolls = d.rolls.slice();
+    S.last = Array.isArray(d.last) && d.last.length === 2 ? d.last.slice() : null;
+    if (typeof d.msg === 'string') S.msg = d.msg;
+    buildTokens(); syncAll();
+  }
+};
+try {
+  window.claude?.hot?.snapshot?.(() => S && ({n: S.n, pos: S.pos, turn: S.turn, over: S.over, rolls: S.rolls, msg: S.msg, last: S.last, total: S.total, pond: S.pond, storm: S.storm, rainbow: S.rainbow}));
+} catch (e) {}
+try {
+  if (window.claude?.hot?.ready) window.claude.hot.ready(boot);
+  else boot(window.claude?.hot?.data ?? {});
+} catch (e) { boot({}); }
+})();
+</script>
+
+</body>
+</html>
